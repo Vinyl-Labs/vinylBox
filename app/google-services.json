@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "250378865774",
+    "firebase_url": "https://vinyl-56cb9.firebaseio.com",
+    "project_id": "vinyl-56cb9",
+    "storage_bucket": "vinyl-56cb9.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:250378865774:android:55bb38098849bda7",
+        "android_client_info": {
+          "package_name": "checkvinyl.com.vinylbox"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "250378865774-755f1eip8bnvcl3m6qll5gtit1mm3r6v.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "checkvinyl.com.vinylbox",
+            "certificate_hash": "15bf2a0ddddcca3043a689f2b82503e6bbbc6b5a"
+          }
+        },
+        {
+          "client_id": "250378865774-7026lojhmj42b43m1cfu4oh6icuo9dtq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBG-rjvLJ81xJyvsHKDCYLTzikATy8ZYj4"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "250378865774-7026lojhmj42b43m1cfu4oh6icuo9dtq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
