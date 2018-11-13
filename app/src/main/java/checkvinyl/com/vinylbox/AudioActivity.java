@@ -11,13 +11,16 @@ import com.gracenote.gnsdk.GnException;
 public class AudioActivity extends AppCompatActivity {
 
     AudioModule audioModule;
+    Firestore firestore;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_audio);
-        audioModule = new AudioModule();
+        firestore = new Firestore(this);
+        audioModule = new AudioModule(firestore);
+
 
         try {
             audioModule.initializeUser(getApplicationContext());

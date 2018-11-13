@@ -1,9 +1,12 @@
 package checkvinyl.com.vinylbox;
 
+import android.app.Activity;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -15,7 +18,7 @@ class Firestore {
 
     private FirebaseFirestore db;
 
-    Firestore() {
+    Firestore(Activity activity) {
         db = FirebaseFirestore.getInstance();
         getVenue();
         getEvent();
@@ -61,7 +64,21 @@ class Firestore {
     }
 
     public void saveTrackData(Map<String, Object> trackData) {
-
+        Log.i("SENDING TRACK DATA", "Sending Track Data");
+        db.collection("events").document("YXaL6JNrjX92SNFO0xw1").collection("songs")
+                .add(trackData)
+                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                    @Override
+                    public void onSuccess(DocumentReference documentReference) {
+                        Log.i("SUCCESS", "Track data added with ID: " + documentReference.getId());
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.w("DB_ERROR", "Error adding document", e);
+                    }
+                });
     }
 
 }

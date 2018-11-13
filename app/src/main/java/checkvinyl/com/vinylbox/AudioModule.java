@@ -50,9 +50,10 @@ public class AudioModule  implements IGnMusicIdStreamEvents {
     private GnMusicIdStream gnMusicIdStream;
     private List<GnMusicIdStream> streamIdObjects = new ArrayList<>();
     private Firestore firestore;
+    private Map<String, Object> previousTrack;
 
-    AudioModule() {
-        firestore = new Firestore();
+    AudioModule(Firestore firestore) {
+        this.firestore = firestore;
     }
 
     public void initializeUser(Context context) throws GnException {
@@ -139,7 +140,7 @@ public class AudioModule  implements IGnMusicIdStreamEvents {
                         }
                     }
                 },
-                180000);
+                120000);
 
     }
 
@@ -412,41 +413,55 @@ public class AudioModule  implements IGnMusicIdStreamEvents {
     ///////////////////////////////////////////////////////////////////////////////////////////////
 
     private void getTrackDetails(GnResponseAlbums gnResponseAlbums) throws GnException {
-        Log.i("RESULT_TITLE", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().title().display());
-        Log.i("RESULT_ARTIST_1", gnResponseAlbums.albums().getByIndex(0).next().artist().name().display());
-        Log.i("RESULT_ARTIST_2", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().artist().name().display());
-        Log.i("RESULT_GENRE_1", gnResponseAlbums.albums().getByIndex(0).next().genre(GnDataLevel.kDataLevel_1));
-        Log.i("RESULT_GENRE_2", gnResponseAlbums.albums().getByIndex(0).next().genre(GnDataLevel.kDataLevel_2));
-        Log.i("RESULT_GENRE_3", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().genre(GnDataLevel.kDataLevel_1));
-        Log.i("RESULT_MOOD_1", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().mood(GnDataLevel.kDataLevel_1));
-        Log.i("RESULT_MOOD_2", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().mood(GnDataLevel.kDataLevel_2));
-        Log.i("RESULT_TEMPO_1", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().tempo(GnDataLevel.kDataLevel_1));
-        Log.i("RESULT_TEMPO_2", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().tempo(GnDataLevel.kDataLevel_2));
-        Log.i("RESULT_TEMPO_3", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().tempo(GnDataLevel.kDataLevel_3));
-        Log.i("MATCH_CONFIDENCE", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().matchConfidence());
-        Log.i("MATCH_SCORE", "" + gnResponseAlbums.albums().getByIndex(0).next().trackMatched().matchScore());
+        String track = gnResponseAlbums.albums().getByIndex(0).next().trackMatched().title().display();
+//        Log.i("RESULT_TITLE", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().title().display());
+//        Log.i("RESULT_ARTIST_1", gnResponseAlbums.albums().getByIndex(0).next().artist().name().display());
+//        Log.i("RESULT_ARTIST_2", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().artist().name().display());
+//        Log.i("RESULT_GENRE_1", gnResponseAlbums.albums().getByIndex(0).next().genre(GnDataLevel.kDataLevel_1));
+//        Log.i("RESULT_GENRE_2", gnResponseAlbums.albums().getByIndex(0).next().genre(GnDataLevel.kDataLevel_2));
+//        Log.i("RESULT_GENRE_3", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().genre(GnDataLevel.kDataLevel_1));
+//        Log.i("RESULT_MOOD_1", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().mood(GnDataLevel.kDataLevel_1));
+//        Log.i("RESULT_MOOD_2", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().mood(GnDataLevel.kDataLevel_2));
+//        Log.i("RESULT_TEMPO_1", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().tempo(GnDataLevel.kDataLevel_1));
+//        Log.i("RESULT_TEMPO_2", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().tempo(GnDataLevel.kDataLevel_2));
+//        Log.i("RESULT_TEMPO_3", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().tempo(GnDataLevel.kDataLevel_3));
+//        Log.i("MATCH_CONFIDENCE", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().matchConfidence());
+//        Log.i("MATCH_SCORE", "" + gnResponseAlbums.albums().getByIndex(0).next().trackMatched().matchScore());
 
         Map<String, Object> mood = new HashMap<>();
         mood.put("mood_1", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().mood(GnDataLevel.kDataLevel_1));
         mood.put("mood_2", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().mood(GnDataLevel.kDataLevel_2));
 
         Map<String, Object> genre = new HashMap<>();
-        genre.put("genre_1", gnResponseAlbums.albums().getByIndex(0).next().genre(GnDataLevel.kDataLevel_1));
-        genre.put("genre_2", gnResponseAlbums.albums().getByIndex(0).next().genre(GnDataLevel.kDataLevel_2));
-        genre.put("genre_3", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().genre(GnDataLevel.kDataLevel_1));
+        if (gnResponseAlbums.albums().getByIndex(0).next().trackMatched().genre(GnDataLevel.kDataLevel_1).isEmpty()) {
+            genre.put("genre_1", gnResponseAlbums.albums().getByIndex(0).next().genre(GnDataLevel.kDataLevel_1));
+            genre.put("genre_2", gnResponseAlbums.albums().getByIndex(0).next().genre(GnDataLevel.kDataLevel_2));
+        } else {
+            genre.put("genre_1", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().genre(GnDataLevel.kDataLevel_1));
+            genre.put("genre_2", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().genre(GnDataLevel.kDataLevel_2));
+        }
 
         Map<String, Object> trackDetails = new HashMap<>();
         trackDetails.put("title", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().title().display());
         trackDetails.put("genre", genre);
         trackDetails.put("mood", mood);
-        trackDetails.put("tempo_3", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().tempo(GnDataLevel.kDataLevel_3));
+        trackDetails.put("tempo", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().tempo(GnDataLevel.kDataLevel_3));
         if (gnResponseAlbums.albums().getByIndex(0).next().trackMatched().artist().name().display().isEmpty()) {
-            trackDetails.put("artist_1", gnResponseAlbums.albums().getByIndex(0).next().artist().name().display());
+            trackDetails.put("artist", gnResponseAlbums.albums().getByIndex(0).next().artist().name().display());
+        } else {
+            trackDetails.put("artist", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().artist().name().display());
+        }
+
+        if (duplicateTrack(trackDetails) || track.isEmpty() ) {
+            Log.i("DUPLICATE", "The song has not changed yet");
             return;
         }
-        trackDetails.put("artist_2", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().artist().name().display());
-
         firestore.saveTrackData(trackDetails);
-
+        previousTrack = trackDetails;
     }
+
+    private boolean duplicateTrack(Map<String, Object> currentTrack) {
+        return currentTrack.equals(previousTrack);
+    }
+
     }
