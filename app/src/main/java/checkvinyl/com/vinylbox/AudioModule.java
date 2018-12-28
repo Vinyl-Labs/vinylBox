@@ -1,8 +1,14 @@
 package checkvinyl.com.vinylbox;
 
+import android.app.Activity;
 import android.content.Context;
 import android.util.Log;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
 
+import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ServerTimestamp;
 import com.gracenote.gnsdk.GnDataLevel;
 import com.gracenote.gnsdk.GnDescriptor;
 import com.gracenote.gnsdk.GnError;
@@ -38,22 +44,29 @@ import com.gracenote.gnsdk.IGnSystemEvents;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 
-public class AudioModule  implements IGnMusicIdStreamEvents {
+public class AudioModule implements IGnMusicIdStreamEvents {
     private String appString;
     private GnUser gnUser;
     private IGnAudioSource gnMicrophone;
     private GnMusicIdStream gnMusicIdStream;
-    private List<GnMusicIdStream> streamIdObjects = new ArrayList<>();
+    private List<GnMusicIdStream> streamIdObjects;
     private Firestore firestore;
     private Map<String, Object> previousTrack;
+    private Activity activity;
 
-    AudioModule(Firestore firestore) {
+
+    private ArrayAdapter adapter;
+
+    AudioModule(Firestore firestore, Activity activity) {
         this.firestore = firestore;
+        this.activity = activity;
+        streamIdObjects = new ArrayList<>();
     }
 
     public void initializeUser(Context context) throws GnException {
@@ -98,6 +111,17 @@ public class AudioModule  implements IGnMusicIdStreamEvents {
 //         Ingest MusicID-Stream local bundle, perform in another thread as it can be lengthy
         Thread ingestThread = new Thread(new LocalBundleIngestRunnable(context));
         ingestThread.start();
+    }
+
+    public void updateTrackList(TrackData track) {
+        adapter.insert(track, 0);
+        adapter.notifyDataSetChanged();
+    }
+
+    public void createUi() {
+        ListView listView = activity.findViewById(R.id.track_list);
+            adapter = new TrackListAdapter(activity.getApplicationContext(), new ArrayList<TrackData>());
+            listView.setAdapter(adapter);
     }
 
     public void startListening() throws GnException {
@@ -192,7 +216,6 @@ public class AudioModule  implements IGnMusicIdStreamEvents {
     public void statusEvent(GnStatus gnStatus, long l, long l1, long l2, IGnCancellable iGnCancellable) {
         Log.i("STATUS_EVENT", gnStatus.toString());
     }
-
 
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -444,6 +467,7 @@ public class AudioModule  implements IGnMusicIdStreamEvents {
         Map<String, Object> trackDetails = new HashMap<>();
         trackDetails.put("title", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().title().display());
         trackDetails.put("genre", genre);
+        trackDetails.put("timestamp", FieldValue.serverTimestamp());
         trackDetails.put("mood", mood);
         trackDetails.put("tempo", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().tempo(GnDataLevel.kDataLevel_3));
         if (gnResponseAlbums.albums().getByIndex(0).next().trackMatched().artist().name().display().isEmpty()) {
@@ -452,7 +476,7 @@ public class AudioModule  implements IGnMusicIdStreamEvents {
             trackDetails.put("artist", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().artist().name().display());
         }
 
-        if (duplicateTrack(trackDetails) || track.isEmpty() ) {
+        if (duplicateTrack(trackDetails) || track.isEmpty()) {
             Log.i("DUPLICATE", "The song has not changed yet");
             return;
         }
@@ -464,4 +488,4 @@ public class AudioModule  implements IGnMusicIdStreamEvents {
         return currentTrack.equals(previousTrack);
     }
 
-    }
+}
