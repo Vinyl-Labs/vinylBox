@@ -58,7 +58,7 @@ public class AudioActivity extends AppCompatActivity {
                 for (DocumentChange change : documentSnapshots.getDocumentChanges()) {
                     Log.i("DB_CHANGES", "Title: " + change.getDocument().getString("title") + "Type: " + change.getType().name());
                     DocumentSnapshot doc = change.getDocument();
-                    TrackData track = new TrackData(doc.getString("title"), doc.getString("artist"), new Genre(doc.getString("genre_1"), doc.getString("genre_2")), new Mood(doc.getString("mood_1"), doc.getString("mood_2")), doc.getString("tempo"));
+                    TrackData track = new TrackData(doc.getString("title"), doc.getString("artist"), new Genre(doc.getString("genre_1"), doc.getString("genre_2")), new Mood(doc.getString("mood_1"), doc.getString("mood_2")), doc.getString("tempo"), doc.getString("id"));
 
                     if (change.getType() == DocumentChange.Type.ADDED) {
                         audioModule.addTrack(track);

@@ -48,6 +48,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 
 public class AudioModule implements IGnMusicIdStreamEvents {
@@ -127,7 +128,7 @@ public class AudioModule implements IGnMusicIdStreamEvents {
 
        for(int i = 0; i < pos; i++ ) {
            trackList.add((TrackData) adapter.getItem(i));
-          if(trackList.get(i).getTitle().equals(track.getTitle())) {
+          if(trackList.get(i).getId().equals(track.getId())) {
               adapter.remove(trackList.get(i));
           }
        }
@@ -456,19 +457,6 @@ public class AudioModule implements IGnMusicIdStreamEvents {
 
     private void getTrackDetails(GnResponseAlbums gnResponseAlbums) throws GnException {
         String track = gnResponseAlbums.albums().getByIndex(0).next().trackMatched().title().display();
-//        Log.i("RESULT_TITLE", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().title().display());
-//        Log.i("RESULT_ARTIST_1", gnResponseAlbums.albums().getByIndex(0).next().artist().name().display());
-//        Log.i("RESULT_ARTIST_2", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().artist().name().display());
-//        Log.i("RESULT_GENRE_1", gnResponseAlbums.albums().getByIndex(0).next().genre(GnDataLevel.kDataLevel_1));
-//        Log.i("RESULT_GENRE_2", gnResponseAlbums.albums().getByIndex(0).next().genre(GnDataLevel.kDataLevel_2));
-//        Log.i("RESULT_GENRE_3", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().genre(GnDataLevel.kDataLevel_1));
-//        Log.i("RESULT_MOOD_1", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().mood(GnDataLevel.kDataLevel_1));
-//        Log.i("RESULT_MOOD_2", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().mood(GnDataLevel.kDataLevel_2));
-//        Log.i("RESULT_TEMPO_1", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().tempo(GnDataLevel.kDataLevel_1));
-//        Log.i("RESULT_TEMPO_2", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().tempo(GnDataLevel.kDataLevel_2));
-//        Log.i("RESULT_TEMPO_3", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().tempo(GnDataLevel.kDataLevel_3));
-//        Log.i("MATCH_CONFIDENCE", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().matchConfidence());
-//        Log.i("MATCH_SCORE", "" + gnResponseAlbums.albums().getByIndex(0).next().trackMatched().matchScore());
 
         Map<String, Object> mood = new HashMap<>();
         mood.put("mood_1", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().mood(GnDataLevel.kDataLevel_1));
@@ -487,6 +475,7 @@ public class AudioModule implements IGnMusicIdStreamEvents {
         trackDetails.put("title", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().title().display());
         trackDetails.put("genre", genre);
         trackDetails.put("timestamp", FieldValue.serverTimestamp());
+        trackDetails.put("id", UUID.randomUUID().toString());
         trackDetails.put("mood", mood);
         trackDetails.put("tempo", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().tempo(GnDataLevel.kDataLevel_3));
         if (gnResponseAlbums.albums().getByIndex(0).next().trackMatched().artist().name().display().isEmpty()) {
