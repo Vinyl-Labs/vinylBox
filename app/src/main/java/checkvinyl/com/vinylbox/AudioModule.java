@@ -59,6 +59,8 @@ public class AudioModule implements IGnMusicIdStreamEvents {
     private Firestore firestore;
     private Map<String, Object> previousTrack;
     private Activity activity;
+    private ListView listView;
+
 
 
     private ArrayAdapter adapter;
@@ -67,6 +69,7 @@ public class AudioModule implements IGnMusicIdStreamEvents {
         this.firestore = firestore;
         this.activity = activity;
         streamIdObjects = new ArrayList<>();
+        listView = activity.findViewById(R.id.track_list);
     }
 
     public void initializeUser(Context context) throws GnException {
@@ -113,13 +116,29 @@ public class AudioModule implements IGnMusicIdStreamEvents {
         ingestThread.start();
     }
 
-    public void updateTrackList(TrackData track) {
+    public void addTrack(TrackData track) {
         adapter.insert(track, 0);
         adapter.notifyDataSetChanged();
     }
 
+    public void removeTrack(TrackData track) {
+        ArrayList<TrackData> trackList = new ArrayList<>();
+       int pos = adapter.getCount();
+
+       for(int i = 0; i < pos; i++ ) {
+           trackList.add((TrackData) adapter.getItem(i));
+          if(trackList.get(i).getTitle().equals(track.getTitle())) {
+              adapter.remove(trackList.get(i));
+          }
+       }
+
+
+    }
+
+
+
+
     public void createUi() {
-        ListView listView = activity.findViewById(R.id.track_list);
             adapter = new TrackListAdapter(activity.getApplicationContext(), new ArrayList<TrackData>());
             listView.setAdapter(adapter);
     }

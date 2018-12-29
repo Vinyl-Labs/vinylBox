@@ -60,8 +60,12 @@ public class AudioActivity extends AppCompatActivity {
                     DocumentSnapshot doc = change.getDocument();
                     TrackData track = new TrackData(doc.getString("title"), doc.getString("artist"), new Genre(doc.getString("genre_1"), doc.getString("genre_2")), new Mood(doc.getString("mood_1"), doc.getString("mood_2")), doc.getString("tempo"));
 
-                    if(change.getType() == DocumentChange.Type.ADDED || change.getType() == DocumentChange.Type.REMOVED)
-                    audioModule.updateTrackList(track);
+                    if (change.getType() == DocumentChange.Type.ADDED) {
+                        audioModule.addTrack(track);
+                    } else if (change.getType() == DocumentChange.Type.REMOVED) {
+//                        TODO: add remove track logic
+                        audioModule.removeTrack(track);
+                    }
                 }
             }
         });
