@@ -3,8 +3,11 @@ package checkvinyl.com.vinylbox;
 import android.app.Activity;
 import android.content.Context;
 import android.util.Log;
+import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -61,9 +64,7 @@ public class AudioModule implements IGnMusicIdStreamEvents {
     private Map<String, Object> previousTrack;
     private Activity activity;
     private ListView listView;
-
-
-
+    private TrackData selectedTrack;
     private ArrayAdapter adapter;
 
     AudioModule(Firestore firestore, Activity activity) {
@@ -120,28 +121,36 @@ public class AudioModule implements IGnMusicIdStreamEvents {
     public void addTrack(TrackData track) {
         adapter.insert(track, 0);
         adapter.notifyDataSetChanged();
-    }
+        }
 
     public void removeTrack(TrackData track) {
         ArrayList<TrackData> trackList = new ArrayList<>();
-       int pos = adapter.getCount();
+        int pos = adapter.getCount();
 
-       for(int i = 0; i < pos; i++ ) {
-           trackList.add((TrackData) adapter.getItem(i));
-          if(trackList.get(i).getId().equals(track.getId())) {
-              adapter.remove(trackList.get(i));
-          }
-       }
+        for (int i = 0; i < pos; i++) {
+            trackList.add((TrackData) adapter.getItem(i));
+            if (trackList.get(i).getId().equals(track.getId())) {
+                adapter.remove(trackList.get(i));
+            }
+        }
 
 
     }
 
 
-
-
     public void createUi() {
-            adapter = new TrackListAdapter(activity.getApplicationContext(), new ArrayList<TrackData>());
-            listView.setAdapter(adapter);
+        adapter = new TrackListAdapter(activity.getApplicationContext(), new ArrayList<TrackData>());
+        listView.setAdapter(adapter);
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int pos, long id) {
+                if (adapter.getCount() > 0) {
+                    selectedTrack = (TrackData) adapter.getItem(pos);
+                    Toast.makeText(activity.getApplicationContext(), selectedTrack.getTitle(), Toast.LENGTH_SHORT).show();
+                    view.setSelected(true);
+                }
+            }
+        });
     }
 
     public void startListening() throws GnException {

@@ -21,9 +21,9 @@ public class TrackListAdapter extends ArrayAdapter<TrackData> {
 
     @NonNull
     @Override
-    public View getView(int position, View convertView, ViewGroup parent) {
+    public View getView(final int position, View convertView, ViewGroup parent) {
         LayoutInflater trackInflater = LayoutInflater.from(aContext);
-        View trackView = trackInflater.inflate(R.layout.track_item, parent, false);
+        final View trackView = trackInflater.inflate(R.layout.track_item, parent, false);
 
         TrackData singleTrack = getItem(position);
         TextView trackTitle = (TextView) trackView.findViewById(R.id.title);
@@ -33,6 +33,16 @@ public class TrackListAdapter extends ArrayAdapter<TrackData> {
 
         trackTitle.setText(singleTrack.getTitle());
         trackArtist.setText(singleTrack.getArtist());
+
+        new android.os.Handler().postDelayed(
+                new Runnable() {
+                    public void run() {
+                        if(position == 0){
+                            trackView.setSelected(true);
+                        }
+                    }
+                },
+                100);
 
         return trackView;
     }

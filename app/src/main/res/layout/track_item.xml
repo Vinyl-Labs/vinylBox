@@ -4,7 +4,8 @@
     android:gravity="center_vertical|center_horizontal"
     android:orientation="vertical"
     android:paddingBottom="2dip"
-    android:paddingTop="2dip">
+    android:paddingTop="2dip"
+    android:background="@drawable/track_selecter">
 
     <LinearLayout
         android:layout_width="wrap_content"

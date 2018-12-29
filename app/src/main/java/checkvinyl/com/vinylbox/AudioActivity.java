@@ -63,7 +63,6 @@ public class AudioActivity extends AppCompatActivity {
                     if (change.getType() == DocumentChange.Type.ADDED) {
                         audioModule.addTrack(track);
                     } else if (change.getType() == DocumentChange.Type.REMOVED) {
-//                        TODO: add remove track logic
                         audioModule.removeTrack(track);
                     }
                 }
