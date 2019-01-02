@@ -2,20 +2,27 @@ package checkvinyl.com.vinylbox;
 
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.RemoteViews;
 import android.widget.Toast;
 
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ServerTimestamp;
+import com.gracenote.gnsdk.GnContent;
+import com.gracenote.gnsdk.GnContentType;
 import com.gracenote.gnsdk.GnDataLevel;
 import com.gracenote.gnsdk.GnDescriptor;
 import com.gracenote.gnsdk.GnError;
 import com.gracenote.gnsdk.GnException;
+import com.gracenote.gnsdk.GnImageSize;
 import com.gracenote.gnsdk.GnLanguage;
 import com.gracenote.gnsdk.GnLicenseInputMode;
 import com.gracenote.gnsdk.GnList;
@@ -44,8 +51,10 @@ import com.gracenote.gnsdk.IGnLookupLocalStreamIngestEvents;
 import com.gracenote.gnsdk.IGnMusicIdStreamEvents;
 import com.gracenote.gnsdk.IGnSystemEvents;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -66,12 +75,15 @@ public class AudioModule implements IGnMusicIdStreamEvents {
     private ListView listView;
     private TrackData selectedTrack;
     private ArrayAdapter adapter;
+    private ImageView imageView;
+
 
     AudioModule(Firestore firestore, Activity activity) {
         this.firestore = firestore;
         this.activity = activity;
         streamIdObjects = new ArrayList<>();
         listView = activity.findViewById(R.id.track_list);
+        imageView = activity.findViewById(R.id.coverart);
     }
 
     public void initializeUser(Context context) throws GnException {
@@ -121,19 +133,29 @@ public class AudioModule implements IGnMusicIdStreamEvents {
     public void addTrack(TrackData track) {
         adapter.insert(track, 0);
         adapter.notifyDataSetChanged();
-        }
+        TrackData firstTrack = (TrackData) adapter.getItem(0);
+        loadAndDisplayCoverArt(firstTrack.getCoverArt());
+    }
 
     public void removeTrack(TrackData track) {
+        ArrayList<TrackData> trackList = createTrackList();
+        for (TrackData item : trackList) {
+            if (item.getId().equals(track.getId())) {
+                adapter.remove(item);
+            }
+        }
+
+    }
+
+    private ArrayList<TrackData> createTrackList() {
         ArrayList<TrackData> trackList = new ArrayList<>();
         int pos = adapter.getCount();
 
         for (int i = 0; i < pos; i++) {
             trackList.add((TrackData) adapter.getItem(i));
-            if (trackList.get(i).getId().equals(track.getId())) {
-                adapter.remove(trackList.get(i));
-            }
         }
 
+        return trackList;
 
     }
 
@@ -467,6 +489,7 @@ public class AudioModule implements IGnMusicIdStreamEvents {
     private void getTrackDetails(GnResponseAlbums gnResponseAlbums) throws GnException {
         String track = gnResponseAlbums.albums().getByIndex(0).next().trackMatched().title().display();
 
+
         Map<String, Object> mood = new HashMap<>();
         mood.put("mood_1", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().mood(GnDataLevel.kDataLevel_1));
         mood.put("mood_2", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().mood(GnDataLevel.kDataLevel_2));
@@ -485,6 +508,7 @@ public class AudioModule implements IGnMusicIdStreamEvents {
         trackDetails.put("genre", genre);
         trackDetails.put("timestamp", FieldValue.serverTimestamp());
         trackDetails.put("id", UUID.randomUUID().toString());
+        trackDetails.put("artwork", gnResponseAlbums.albums().at(0).next().coverArt().asset(GnImageSize.kImageSizeMedium).url());
         trackDetails.put("mood", mood);
         trackDetails.put("tempo", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().tempo(GnDataLevel.kDataLevel_3));
         if (gnResponseAlbums.albums().getByIndex(0).next().trackMatched().artist().name().display().isEmpty()) {
@@ -503,6 +527,57 @@ public class AudioModule implements IGnMusicIdStreamEvents {
 
     private boolean duplicateTrack(Map<String, Object> currentTrack) {
         return currentTrack.equals(previousTrack);
+    }
+
+    void loadAndDisplayCoverArt(String coverArtUrl) {
+        Thread runThread = new Thread(new CoverArtLoaderRunnable(coverArtUrl));
+        runThread.start();
+    }
+
+    class CoverArtLoaderRunnable implements Runnable {
+
+        String coverArtUrl;
+
+        CoverArtLoaderRunnable(String coverArtUrl) {
+            this.coverArtUrl = coverArtUrl;
+
+        }
+
+        @Override
+        public void run() {
+
+            Bitmap coverArt = null;
+            if (coverArtUrl != null /*&& !coverArtUrl.isEmpty()*/) {
+                URL url;
+                try {
+                    url = new URL("http://" + coverArtUrl);
+                    InputStream input = new BufferedInputStream(url.openStream());
+                    coverArt = BitmapFactory.decodeStream(input);
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+            }
+
+            if (coverArt != null) {
+                final Bitmap finalCoverArt = coverArt;
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        imageView.setImageBitmap(finalCoverArt);
+                    }
+                });
+            } else {
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+//                        set not found image
+                    }
+                });
+            }
+        }
+
     }
 
 }

@@ -83,7 +83,7 @@ class Firestore {
                         if (task.isSuccessful()) {
                             for (DocumentSnapshot doc : task.getResult()) {
                                 if (doc.exists()) {
-                                    TrackData track = new TrackData(doc.getString("title"), doc.getString("artist"), new Genre(doc.getString("genre_1"), doc.getString("genre_2")), new Mood(doc.getString("mood_1"), doc.getString("mood_2")), doc.getString("tempo"), doc.getString("id"));
+                                    TrackData track = new TrackData(doc.getString("title"), doc.getString("artist"), new Genre(doc.getString("genre_1"), doc.getString("genre_2")), new Mood(doc.getString("mood_1"), doc.getString("mood_2")), doc.getString("tempo"), doc.getString("id"), doc.getString("coverArt"));
                                     trackData.add(track);
                                 } else {
                                     return;
@@ -110,7 +110,7 @@ class Firestore {
                 for (DocumentSnapshot doc : documentSnapshots) {
 
                     if (doc.exists()) {
-                        TrackData track = new TrackData(doc.getString("title"), doc.getString("artist"), new Genre(doc.getString("genre_1"), doc.getString("genre_2")), new Mood(doc.getString("mood_1"), doc.getString("mood_2")), doc.getString("tempo"), doc.getString("id"));
+                        TrackData track = new TrackData(doc.getString("title"), doc.getString("artist"), new Genre(doc.getString("genre_1"), doc.getString("genre_2")), new Mood(doc.getString("mood_1"), doc.getString("mood_2")), doc.getString("tempo"), doc.getString("id"), doc.getString("coverArt"));
                         trackData.add(track);
                     } else {
                         return;
