@@ -1,12 +1,29 @@
 package checkvinyl.com.vinylbox;
 
+import android.app.Activity;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.os.Build;
 import android.util.Log;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.ImageView;
+import android.widget.ListView;
+import android.widget.RemoteViews;
+import android.widget.Toast;
 
+import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ServerTimestamp;
+import com.gracenote.gnsdk.GnContent;
+import com.gracenote.gnsdk.GnContentType;
 import com.gracenote.gnsdk.GnDataLevel;
 import com.gracenote.gnsdk.GnDescriptor;
 import com.gracenote.gnsdk.GnError;
 import com.gracenote.gnsdk.GnException;
+import com.gracenote.gnsdk.GnImageSize;
 import com.gracenote.gnsdk.GnLanguage;
 import com.gracenote.gnsdk.GnLicenseInputMode;
 import com.gracenote.gnsdk.GnList;
@@ -35,31 +52,51 @@ import com.gracenote.gnsdk.IGnLookupLocalStreamIngestEvents;
 import com.gracenote.gnsdk.IGnMusicIdStreamEvents;
 import com.gracenote.gnsdk.IGnSystemEvents;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 
-public class AudioModule  implements IGnMusicIdStreamEvents {
+public class AudioModule implements IGnMusicIdStreamEvents {
     private String appString;
     private GnUser gnUser;
     private IGnAudioSource gnMicrophone;
     private GnMusicIdStream gnMusicIdStream;
-    private List<GnMusicIdStream> streamIdObjects = new ArrayList<>();
+    private List<GnMusicIdStream> streamIdObjects;
     private Firestore firestore;
+    private Map<String, Object> previousTrack;
+    private Activity activity;
+    private ListView listView;
+    private TrackData selectedTrack;
+    private ArrayAdapter adapter;
+    private ImageView imageView;
+    private String eventUid;
+    private String hostUid;
 
-    AudioModule() {
-        firestore = new Firestore();
+
+    AudioModule(Firestore firestore, Activity activity) {
+        this.firestore = firestore;
+        this.activity = activity;
+        streamIdObjects = new ArrayList<>();
+        listView = activity.findViewById(R.id.track_list);
+        imageView = activity.findViewById(R.id.coverart);
     }
 
-    public void initializeUser(Context context) throws GnException {
+    public void initializeUser(Context context, String eventId, String hostId) throws GnException {
         String clientId = context.getString(R.string.client_id);
         String clientTag = context.getString(R.string.client_tag);
         String license = getAssetAsString(context);
         appString = "1.1";
+
+        eventUid = eventId;
+        hostUid = hostId;
 
         // GnManager must be created first, it initializes GNSDK
         GnManager gnManager = new GnManager(context, license, GnLicenseInputMode.kLicenseInputModeString);
@@ -97,6 +134,51 @@ public class AudioModule  implements IGnMusicIdStreamEvents {
 //         Ingest MusicID-Stream local bundle, perform in another thread as it can be lengthy
         Thread ingestThread = new Thread(new LocalBundleIngestRunnable(context));
         ingestThread.start();
+    }
+
+    public void addTrack(TrackData track) {
+        adapter.insert(track, 0);
+        adapter.notifyDataSetChanged();
+        TrackData firstTrack = (TrackData) adapter.getItem(0);
+        loadAndDisplayCoverArt(firstTrack.getCoverArt());
+    }
+
+    public void removeTrack(TrackData track) {
+        ArrayList<TrackData> trackList = createTrackList();
+        for (TrackData item : trackList) {
+            if (item.getId().equals(track.getId())) {
+                adapter.remove(item);
+            }
+        }
+
+    }
+
+    private ArrayList<TrackData> createTrackList() {
+        ArrayList<TrackData> trackList = new ArrayList<>();
+        int pos = adapter.getCount();
+
+        for (int i = 0; i < pos; i++) {
+            trackList.add((TrackData) adapter.getItem(i));
+        }
+
+        return trackList;
+
+    }
+
+
+    public void createUi() {
+        adapter = new TrackListAdapter(activity.getApplicationContext(), new ArrayList<TrackData>());
+        listView.setAdapter(adapter);
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int pos, long id) {
+                if (adapter.getCount() > 0) {
+                    selectedTrack = (TrackData) adapter.getItem(pos);
+                    Toast.makeText(activity.getApplicationContext(), selectedTrack.getTitle(), Toast.LENGTH_SHORT).show();
+                    view.setSelected(true);
+                }
+            }
+        });
     }
 
     public void startListening() throws GnException {
@@ -139,7 +221,7 @@ public class AudioModule  implements IGnMusicIdStreamEvents {
                         }
                     }
                 },
-                180000);
+                120000);
 
     }
 
@@ -191,7 +273,6 @@ public class AudioModule  implements IGnMusicIdStreamEvents {
     public void statusEvent(GnStatus gnStatus, long l, long l1, long l2, IGnCancellable iGnCancellable) {
         Log.i("STATUS_EVENT", gnStatus.toString());
     }
-
 
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -412,41 +493,98 @@ public class AudioModule  implements IGnMusicIdStreamEvents {
     ///////////////////////////////////////////////////////////////////////////////////////////////
 
     private void getTrackDetails(GnResponseAlbums gnResponseAlbums) throws GnException {
-        Log.i("RESULT_TITLE", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().title().display());
-        Log.i("RESULT_ARTIST_1", gnResponseAlbums.albums().getByIndex(0).next().artist().name().display());
-        Log.i("RESULT_ARTIST_2", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().artist().name().display());
-        Log.i("RESULT_GENRE_1", gnResponseAlbums.albums().getByIndex(0).next().genre(GnDataLevel.kDataLevel_1));
-        Log.i("RESULT_GENRE_2", gnResponseAlbums.albums().getByIndex(0).next().genre(GnDataLevel.kDataLevel_2));
-        Log.i("RESULT_GENRE_3", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().genre(GnDataLevel.kDataLevel_1));
-        Log.i("RESULT_MOOD_1", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().mood(GnDataLevel.kDataLevel_1));
-        Log.i("RESULT_MOOD_2", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().mood(GnDataLevel.kDataLevel_2));
-        Log.i("RESULT_TEMPO_1", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().tempo(GnDataLevel.kDataLevel_1));
-        Log.i("RESULT_TEMPO_2", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().tempo(GnDataLevel.kDataLevel_2));
-        Log.i("RESULT_TEMPO_3", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().tempo(GnDataLevel.kDataLevel_3));
-        Log.i("MATCH_CONFIDENCE", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().matchConfidence());
-        Log.i("MATCH_SCORE", "" + gnResponseAlbums.albums().getByIndex(0).next().trackMatched().matchScore());
+        String track = gnResponseAlbums.albums().getByIndex(0).next().trackMatched().title().display();
+
 
         Map<String, Object> mood = new HashMap<>();
         mood.put("mood_1", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().mood(GnDataLevel.kDataLevel_1));
         mood.put("mood_2", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().mood(GnDataLevel.kDataLevel_2));
 
         Map<String, Object> genre = new HashMap<>();
-        genre.put("genre_1", gnResponseAlbums.albums().getByIndex(0).next().genre(GnDataLevel.kDataLevel_1));
-        genre.put("genre_2", gnResponseAlbums.albums().getByIndex(0).next().genre(GnDataLevel.kDataLevel_2));
-        genre.put("genre_3", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().genre(GnDataLevel.kDataLevel_1));
+        if (gnResponseAlbums.albums().getByIndex(0).next().trackMatched().genre(GnDataLevel.kDataLevel_1).isEmpty()) {
+            genre.put("genre_1", gnResponseAlbums.albums().getByIndex(0).next().genre(GnDataLevel.kDataLevel_1));
+            genre.put("genre_2", gnResponseAlbums.albums().getByIndex(0).next().genre(GnDataLevel.kDataLevel_2));
+        } else {
+            genre.put("genre_1", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().genre(GnDataLevel.kDataLevel_1));
+            genre.put("genre_2", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().genre(GnDataLevel.kDataLevel_2));
+        }
 
         Map<String, Object> trackDetails = new HashMap<>();
         trackDetails.put("title", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().title().display());
         trackDetails.put("genre", genre);
+        trackDetails.put("eventUid", eventUid);
+        trackDetails.put("timestamp", FieldValue.serverTimestamp());
+//        trackDetails.put("id", UUID.randomUUID().toString());
+        trackDetails.put("artwork", gnResponseAlbums.albums().at(0).next().coverArt().asset(GnImageSize.kImageSizeMedium).url());
         trackDetails.put("mood", mood);
-        trackDetails.put("tempo_3", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().tempo(GnDataLevel.kDataLevel_3));
+        trackDetails.put("tempo", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().tempo(GnDataLevel.kDataLevel_3));
         if (gnResponseAlbums.albums().getByIndex(0).next().trackMatched().artist().name().display().isEmpty()) {
-            trackDetails.put("artist_1", gnResponseAlbums.albums().getByIndex(0).next().artist().name().display());
+            trackDetails.put("artist", gnResponseAlbums.albums().getByIndex(0).next().artist().name().display());
+        } else {
+            trackDetails.put("artist", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().artist().name().display());
+        }
+
+        if (duplicateTrack(trackDetails) || track.isEmpty()) {
+            Log.i("DUPLICATE", "The song has not changed yet");
             return;
         }
-        trackDetails.put("artist_2", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().artist().name().display());
+        firestore.saveTrackData(trackDetails, eventUid);
+        previousTrack = trackDetails;
+    }
 
-        firestore.saveTrackData(trackDetails);
+    private boolean duplicateTrack(Map<String, Object> currentTrack) {
+        return currentTrack.equals(previousTrack);
+    }
+
+    void loadAndDisplayCoverArt(String coverArtUrl) {
+        Thread runThread = new Thread(new CoverArtLoaderRunnable(coverArtUrl));
+        runThread.start();
+    }
+
+    class CoverArtLoaderRunnable implements Runnable {
+
+        String coverArtUrl;
+
+        CoverArtLoaderRunnable(String coverArtUrl) {
+            this.coverArtUrl = coverArtUrl;
+
+        }
+
+        @Override
+        public void run() {
+
+            Bitmap coverArt = null;
+            if (coverArtUrl != null /*&& !coverArtUrl.isEmpty()*/) {
+                URL url;
+                try {
+                    url = new URL("http://" + coverArtUrl);
+                    InputStream input = new BufferedInputStream(url.openStream());
+                    coverArt = BitmapFactory.decodeStream(input);
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+            }
+
+            if (coverArt != null) {
+                final Bitmap finalCoverArt = coverArt;
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        imageView.setImageBitmap(finalCoverArt);
+                    }
+                });
+            } else {
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+//                        set not found image
+                    }
+                });
+            }
+        }
 
     }
-    }
+
+}
