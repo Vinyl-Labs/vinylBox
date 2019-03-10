@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.os.Build;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
@@ -76,6 +77,8 @@ public class AudioModule implements IGnMusicIdStreamEvents {
     private TrackData selectedTrack;
     private ArrayAdapter adapter;
     private ImageView imageView;
+    private String eventUid;
+    private String hostUid;
 
 
     AudioModule(Firestore firestore, Activity activity) {
@@ -86,11 +89,14 @@ public class AudioModule implements IGnMusicIdStreamEvents {
         imageView = activity.findViewById(R.id.coverart);
     }
 
-    public void initializeUser(Context context) throws GnException {
+    public void initializeUser(Context context, String eventId, String hostId) throws GnException {
         String clientId = context.getString(R.string.client_id);
         String clientTag = context.getString(R.string.client_tag);
         String license = getAssetAsString(context);
         appString = "1.1";
+
+        eventUid = eventId;
+        hostUid = hostId;
 
         // GnManager must be created first, it initializes GNSDK
         GnManager gnManager = new GnManager(context, license, GnLicenseInputMode.kLicenseInputModeString);
@@ -506,8 +512,9 @@ public class AudioModule implements IGnMusicIdStreamEvents {
         Map<String, Object> trackDetails = new HashMap<>();
         trackDetails.put("title", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().title().display());
         trackDetails.put("genre", genre);
+        trackDetails.put("eventUid", eventUid);
         trackDetails.put("timestamp", FieldValue.serverTimestamp());
-        trackDetails.put("id", UUID.randomUUID().toString());
+//        trackDetails.put("id", UUID.randomUUID().toString());
         trackDetails.put("artwork", gnResponseAlbums.albums().at(0).next().coverArt().asset(GnImageSize.kImageSizeMedium).url());
         trackDetails.put("mood", mood);
         trackDetails.put("tempo", gnResponseAlbums.albums().getByIndex(0).next().trackMatched().tempo(GnDataLevel.kDataLevel_3));
@@ -521,7 +528,7 @@ public class AudioModule implements IGnMusicIdStreamEvents {
             Log.i("DUPLICATE", "The song has not changed yet");
             return;
         }
-        firestore.saveTrackData(trackDetails);
+        firestore.saveTrackData(trackDetails, eventUid);
         previousTrack = trackDetails;
     }
 

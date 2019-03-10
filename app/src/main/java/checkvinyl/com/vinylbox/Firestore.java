@@ -124,9 +124,9 @@ class Firestore {
         return trackData;
     }
 
-    public void saveTrackData(Map<String, Object> trackData) {
+    public void saveTrackData(Map<String, Object> trackData, String eventUid) {
         Log.i("SENDING TRACK DATA", "Sending Track Data");
-        db.collection("events").document("YXaL6JNrjX92SNFO0xw1").collection("songs")
+        db.collection("tracks")
                 .add(trackData)
                 .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
                     @Override
